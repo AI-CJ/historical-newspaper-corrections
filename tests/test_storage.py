@@ -1,35 +1,11 @@
-import os
-from pathlib import Path
-import unittest
-from uuid import uuid4
-
 import psycopg
-from psycopg import sql
 
 from backend.alto import read_blocks
 from backend.seed import DATA, seed_demo, seed_page
+from db_case import DatabaseTestCase
 
-MIGRATION = Path(__file__).resolve().parents[1] / "migrations/001_pages_and_blocks.sql"
 
-
-@unittest.skipUnless(os.environ.get("TEST_DATABASE_URL"), "set TEST_DATABASE_URL for PostgreSQL tests")
-class StorageTests(unittest.TestCase):
-    def setUp(self):
-        self.url = os.environ["TEST_DATABASE_URL"]
-        self.schema = "test_" + uuid4().hex
-        with psycopg.connect(self.url) as conn:
-            conn.execute(sql.SQL("CREATE SCHEMA {}").format(sql.Identifier(self.schema)))
-        self.addCleanup(self.drop_schema)
-        with self.connect() as conn:
-            conn.execute(MIGRATION.read_text())
-
-    def connect(self):
-        return psycopg.connect(self.url, options=f"-c search_path={self.schema}")
-
-    def drop_schema(self):
-        with psycopg.connect(self.url) as conn:
-            conn.execute(sql.SQL("DROP SCHEMA {} CASCADE").format(sql.Identifier(self.schema)))
-
+class StorageTests(DatabaseTestCase):
     def test_retry_and_reconnect_preserve_exact_ocr(self):
         with self.connect() as conn:
             self.assertTrue(seed_demo(conn))

@@ -24,4 +24,17 @@ psql "$DATABASE_URL" -c 'SELECT source_id, original_text FROM blocks ORDER BY pa
 
 Running the seed again skips the existing page. Each page and its blocks are inserted together. PostgreSQL rejects attempts to overwrite original OCR.
 
-To run all tests, set `TEST_DATABASE_URL` to a PostgreSQL test database where your role can create schemas. Run `python -m unittest discover -s tests -v`. Each database test creates and removes its own schema.
+To run all tests, install `python -m pip install -r backend/requirements-test.txt` and set `TEST_DATABASE_URL` to a PostgreSQL test database where your role can create schemas. Run `python -m unittest discover -s tests -v`. Each database test creates and removes its own schema.
+
+## Read pages over HTTP
+
+With the database migrated and seeded, keep `DATABASE_URL` set and run
+`python -m uvicorn backend.api:app` from the repository root. Open
+`http://127.0.0.1:8000/docs` to try the read API.
+
+- `GET /pages` lists pages with their scan and source links.
+- `GET /pages/{page_id}` returns one page with its OCR blocks in reading order.
+- `GET /blocks/{block_id}` returns the original text and position of a single block.
+
+Use the numeric IDs returned by the API. A block's `source_id`, such as
+`BLOCK1`, identifies it within the original page XML.
