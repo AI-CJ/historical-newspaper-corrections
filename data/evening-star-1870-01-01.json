@@ -1,0 +1,11 @@
+{
+  "title": "Evening star",
+  "city": "Washington, D.C.",
+  "issue_date": "1870-01-01",
+  "page": 1,
+  "catalog_url": "https://www.loc.gov/resource/sn83045462/1870-01-01/ed-1/?sp=1",
+  "scan_url": "https://tile.loc.gov/image-services/iiif/service:ndnp:dlc:batch_dlc_leonberger_ver03:data:sn83045462:00280654334:1870010101:0524/full/pct:50/0/default.jpg",
+  "alto_url": "https://tile.loc.gov/storage-services/service/ndnp/dlc/batch_dlc_leonberger_ver03/data/sn83045462/00280654334/1870010101/0524.xml",
+  "alto_sha256": "6ce02de528bc640d954e340467300dc2b30a6d250842235304d3d00421a28a3f",
+  "rights_url": "https://www.loc.gov/collections/chronicling-america/about-this-collection/rights-and-access/"
+}
