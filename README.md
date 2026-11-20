@@ -4,9 +4,24 @@ The first sample is the front page of the Washington Evening Star from January 1
 
 ```sh
 python3 backend/alto.py data/masthead.xml
-python3 -m unittest discover -s tests -v
+python3 -m unittest discover -s tests -p test_alto.py -v
 ```
 
 The sample contains the first three source text blocks, including the damaged masthead reading. Their XML elements were extracted from the Library of Congress ALTO file. The wrapper is abbreviated. The manifest records the scan URL and SHA-256 of the complete original XML. The 1870 issue is in the public domain in the United States. [Original page](https://www.loc.gov/resource/sn83045462/1870-01-01/ed-1/?sp=1) · [Collection rights](https://www.loc.gov/collections/chronicling-america/about-this-collection/rights-and-access/)
 
-The reader accepts one ALTO v2 page per file. It preserves source block order, explicit spaces, printed hyphens and line breaks. Column reading order can need human review. The next increment will store these passages in PostgreSQL.
+The reader accepts one ALTO v2 page per file. It preserves source block order, explicit spaces, printed hyphens and line breaks. Column reading order can need human review.
+
+## Store the demo in PostgreSQL
+
+Use Python 3.10+ and PostgreSQL 16. From the repository root, activate a Python virtual environment and set `DATABASE_URL` to an empty database you own. Apply each numbered migration once, in order.
+
+```sh
+python -m pip install -r backend/requirements.txt
+psql "$DATABASE_URL" -X --single-transaction -v ON_ERROR_STOP=1 -f migrations/001_pages_and_blocks.sql
+python -m backend.seed
+psql "$DATABASE_URL" -c 'SELECT source_id, original_text FROM blocks ORDER BY page_id, position'
+```
+
+Running the seed again skips the existing page. Each page and its blocks are inserted together. PostgreSQL rejects attempts to overwrite original OCR.
+
+To run all tests, set `TEST_DATABASE_URL` to a PostgreSQL test database where your role can create schemas. Run `python -m unittest discover -s tests -v`. Each database test creates and removes its own schema.
