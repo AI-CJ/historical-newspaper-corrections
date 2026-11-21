@@ -2,10 +2,12 @@
 
 import os
 from datetime import date, datetime
+from pathlib import Path as FilePath
 from typing import Annotated
 
 import psycopg
 from fastapi import Depends, FastAPI, HTTPException, Path
+from fastapi.staticfiles import StaticFiles
 from psycopg.rows import dict_row
 from pydantic import BaseModel, Field, field_validator
 
@@ -126,3 +128,9 @@ def list_revisions(block_id: RecordId, conn: Database) -> list[Revision]:
         """SELECT block_id, version, transcription, saved_at FROM block_revisions
            WHERE block_id = %s ORDER BY version DESC""", (block_id,)
     ).fetchall()
+
+
+# A backend-only checkout can still serve the API before the editor is built.
+editor_dist = FilePath(__file__).resolve().parents[1] / "frontend" / "dist"
+if editor_dist.is_dir():
+    app.mount("/editor", StaticFiles(directory=editor_dist, html=True), name="editor")

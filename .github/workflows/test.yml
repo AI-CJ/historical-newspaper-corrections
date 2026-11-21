@@ -18,6 +18,12 @@ jobs:
       TEST_DATABASE_URL: postgresql://postgres:test@localhost:5432/newspaper_test
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build the editor
+        working-directory: frontend
+        run: npm ci && npm run build
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'

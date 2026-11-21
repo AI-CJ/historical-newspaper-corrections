@@ -1,6 +1,6 @@
 # Historical newspaper corrections
 
-The first sample is the front page of the Washington Evening Star from January 1, 1870. The OCR reader extracts passages for the planned scan-and-text editor. It runs offline with Python 3.10 or later.
+The first sample is the front page of the Washington Evening Star from January 1, 1870. The browser editor shows the page scan beside editable OCR passages. The command-line OCR reader runs offline with Python 3.10 or later.
 
 ```sh
 python3 backend/alto.py data/masthead.xml
@@ -26,6 +26,23 @@ psql "$DATABASE_URL" -c 'SELECT source_id, original_text FROM blocks ORDER BY pa
 Running the seed again skips the existing page. Each page and its blocks are inserted together. PostgreSQL rejects attempts to overwrite original OCR.
 
 To run all tests, install `python -m pip install -r backend/requirements-test.txt` and set `TEST_DATABASE_URL` to a PostgreSQL test database where your role can create schemas. Run `python -m unittest discover -s tests -v`. Each database test creates and removes its own schema.
+
+## Open the editor
+
+After seeding the database, build the React interface with Node.js 22 or later.
+From the repository root, run:
+
+```sh
+(cd frontend && npm ci && npm run build)
+python -m uvicorn backend.api:app
+```
+
+Open `http://127.0.0.1:8000/editor/`. Select a passage, compare its OCR with
+the scan, edit the transcription, and save. The sample includes a 1,900-pixel-wide WebP viewing copy made from the
+Library of Congress JPEG linked in the manifest. Enlarge it to inspect small
+print, or open the archive link for the higher-resolution source.
+If another reader saves first, the editor shows their text beside your draft.
+Choose **Continue with my draft**, review the wording, and save when ready.
 
 ## Read and correct pages over HTTP
 
