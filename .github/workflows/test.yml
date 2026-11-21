@@ -23,3 +23,18 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install -r backend/requirements-test.txt
       - run: python -m unittest discover -s tests -v
+      - name: Check competing saves in two Chromium sessions
+        env:
+          DATABASE_URL: postgresql://postgres:test@localhost:5432/newspaper_test
+        run: |
+          python -m pip install playwright==1.56.0
+          export CHROME_BIN="$(command -v google-chrome)"
+          for migration in migrations/*.sql; do
+            psql "$DATABASE_URL" -X -1 -v ON_ERROR_STOP=1 -f "$migration"
+          done
+          python -m backend.seed
+          python -m uvicorn backend.api:app --port 8053 &
+          server=$!
+          trap 'kill "$server"' EXIT
+          curl -fsS --retry 5 --retry-connrefused http://127.0.0.1:8053/pages >/dev/null
+          python tests/browser_conflict.py

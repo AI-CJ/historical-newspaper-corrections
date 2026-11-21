@@ -1,13 +1,13 @@
-"""Read newspaper pages and OCR blocks from PostgreSQL."""
+"""Read newspaper pages and record corrections to their OCR."""
 
 import os
-from datetime import date
+from datetime import date, datetime
 from typing import Annotated
 
 import psycopg
 from fastapi import Depends, FastAPI, HTTPException, Path
 from psycopg.rows import dict_row
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 app = FastAPI(title="Historical newspaper corrections")
 
@@ -27,6 +27,27 @@ class Block(BaseModel):
     source_id: str
     position: int
     original_text: str
+    transcription: str
+    version: int
+
+
+class Correction(BaseModel):
+    base_version: Annotated[int, Field(strict=True, ge=0, lt=2**63 - 1)]
+    transcription: str
+
+    @field_validator("transcription")
+    @classmethod
+    def validate_text(cls, value: str) -> str:
+        if not value.strip() or "\x00" in value:
+            raise ValueError("Enter nonblank text without null characters")
+        return value
+
+
+class Revision(BaseModel):
+    block_id: int
+    version: int
+    transcription: str
+    saved_at: datetime
 
 
 class PageDetail(Page):
@@ -59,7 +80,8 @@ def get_page(page_id: RecordId, conn: Database) -> PageDetail:
     if page is None:
         raise HTTPException(404, "Page not found")
     blocks = conn.execute(
-        """SELECT id, page_id, source_id, position, original_text FROM blocks
+        """SELECT id, page_id, source_id, position, original_text, transcription, version
+           FROM current_blocks
            WHERE page_id = %s ORDER BY position""", (page_id,)
     ).fetchall()
     return PageDetail(**page, blocks=blocks)
@@ -68,9 +90,39 @@ def get_page(page_id: RecordId, conn: Database) -> PageDetail:
 @app.get("/blocks/{block_id}")
 def get_block(block_id: RecordId, conn: Database) -> Block:
     block = conn.execute(
-        """SELECT id, page_id, source_id, position, original_text
-           FROM blocks WHERE id = %s""", (block_id,)
+        """SELECT id, page_id, source_id, position, original_text, transcription, version
+           FROM current_blocks WHERE id = %s""", (block_id,)
     ).fetchone()
     if block is None:
         raise HTTPException(404, "Block not found")
     return Block(**block)
+
+
+@app.post("/blocks/{block_id}/revisions", status_code=201)
+def save_revision(block_id: RecordId, edit: Correction, conn: Database) -> Revision:
+    with conn.transaction():
+        revision = conn.execute(
+            """INSERT INTO block_revisions (block_id, version, transcription)
+               SELECT id, version + 1, %s FROM current_blocks
+               WHERE id = %s AND version = %s
+               ON CONFLICT (block_id, version) DO NOTHING
+               RETURNING block_id, version, transcription, saved_at""",
+            (edit.transcription, block_id, edit.base_version),
+        ).fetchone()
+        if revision is None:
+            current = get_block(block_id, conn)
+            raise HTTPException(409, detail={
+                "message": "The passage has changed. Compare your draft with the latest text.",
+                "current_version": current.version,
+                "current_text": current.transcription,
+            })
+    return Revision(**revision)
+
+
+@app.get("/blocks/{block_id}/revisions")
+def list_revisions(block_id: RecordId, conn: Database) -> list[Revision]:
+    get_block(block_id, conn)
+    return conn.execute(
+        """SELECT block_id, version, transcription, saved_at FROM block_revisions
+           WHERE block_id = %s ORDER BY version DESC""", (block_id,)
+    ).fetchall()

@@ -18,6 +18,7 @@ Use Python 3.10+ and PostgreSQL 16. From the repository root, activate a Python 
 ```sh
 python -m pip install -r backend/requirements.txt
 psql "$DATABASE_URL" -X --single-transaction -v ON_ERROR_STOP=1 -f migrations/001_pages_and_blocks.sql
+psql "$DATABASE_URL" -X --single-transaction -v ON_ERROR_STOP=1 -f migrations/002_block_revisions.sql
 python -m backend.seed
 psql "$DATABASE_URL" -c 'SELECT source_id, original_text FROM blocks ORDER BY page_id, position'
 ```
@@ -26,11 +27,11 @@ Running the seed again skips the existing page. Each page and its blocks are ins
 
 To run all tests, install `python -m pip install -r backend/requirements-test.txt` and set `TEST_DATABASE_URL` to a PostgreSQL test database where your role can create schemas. Run `python -m unittest discover -s tests -v`. Each database test creates and removes its own schema.
 
-## Read pages over HTTP
+## Read and correct pages over HTTP
 
 With the database migrated and seeded, keep `DATABASE_URL` set and run
 `python -m uvicorn backend.api:app` from the repository root. Open
-`http://127.0.0.1:8000/docs` to try the read API.
+`http://127.0.0.1:8000/docs` to try the API.
 
 - `GET /pages` lists pages with their scan and source links.
 - `GET /pages/{page_id}` returns one page with its OCR blocks in reading order.
@@ -38,3 +39,16 @@ With the database migrated and seeded, keep `DATABASE_URL` set and run
 
 Use the numeric IDs returned by the API. A block's `source_id`, such as
 `BLOCK1`, identifies it within the original page XML.
+
+Every block starts at version 0 with its original OCR as the transcription.
+To correct a passage, send `POST /blocks/{block_id}/revisions` with the
+version you read and the replacement text. For example:
+
+```json
+{"base_version": 0, "transcription": "The Evening Star"}
+```
+
+A successful save returns HTTP 201 with the new version and timestamp.
+HTTP 409 includes the current text and version so an editor can compare
+the two readings before trying again. `GET /blocks/{block_id}/revisions`
+lists saved corrections newest first. The original remains available on the block.

@@ -6,7 +6,7 @@ from uuid import uuid4
 import psycopg
 from psycopg import sql
 
-MIGRATION = Path(__file__).resolve().parents[1] / "migrations/001_pages_and_blocks.sql"
+MIGRATIONS = Path(__file__).resolve().parents[1] / "migrations"
 
 
 @unittest.skipUnless(os.environ.get("TEST_DATABASE_URL"), "set TEST_DATABASE_URL for PostgreSQL tests")
@@ -18,7 +18,8 @@ class DatabaseTestCase(unittest.TestCase):
             conn.execute(sql.SQL("CREATE SCHEMA {}").format(sql.Identifier(self.schema)))
         self.addCleanup(self.drop_schema)
         with self.connect() as conn:
-            conn.execute(MIGRATION.read_text())
+            for migration in sorted(MIGRATIONS.glob("*.sql")):
+                conn.execute(migration.read_text())
 
     def connect(self):
         return psycopg.connect(self.url, options=f"-c search_path={self.schema}")
