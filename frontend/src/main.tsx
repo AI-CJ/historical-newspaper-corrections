@@ -1,6 +1,7 @@
 import {useEffect, useState} from "react";
 import {createRoot} from "react-dom/client";
 import sample from "../../data/evening-star-1870-01-01.json";
+import {RevisionHistory} from "./RevisionHistory";
 import "./style.css";
 
 type Page = {
@@ -118,6 +119,8 @@ function Workspace({page, catalog}: {page: Detail; catalog: Page[]}) {
             disabled={busy || !!conflict || !dirty || !draft.trim()}>{busy ? "Saving…" : "Save correction"}</button>
             <span>Version {block.version}</span></div>
           <p role="status">{notice}</p>
+          <RevisionHistory key={block.id} blockId={block.id}
+            version={conflict?.current_version ?? block.version}/>
         </> : <p>This page has no OCR passages.</p>}
       </section>
     </div>

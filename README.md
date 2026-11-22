@@ -43,6 +43,8 @@ Library of Congress JPEG linked in the manifest. Enlarge it to inspect small
 print, or open the archive link for the higher-resolution source.
 If another reader saves first, the editor shows their text beside your draft.
 Choose **Continue with my draft**, review the wording, and save when ready.
+Open **Revision history** beneath the editor to inspect each saved transcription
+and its timestamp, newest first. You can read earlier versions while editing a draft.
 
 ## Read and correct pages over HTTP
 
