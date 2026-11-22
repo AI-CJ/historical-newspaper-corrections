@@ -7,6 +7,7 @@ from typing import Annotated
 
 import psycopg
 from fastapi import Depends, FastAPI, HTTPException, Path
+from fastapi.responses import PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from psycopg.rows import dict_row
 from pydantic import BaseModel, Field, field_validator
@@ -87,6 +88,16 @@ def get_page(page_id: RecordId, conn: Database) -> PageDetail:
            WHERE page_id = %s ORDER BY position""", (page_id,)
     ).fetchall()
     return PageDetail(**page, blocks=blocks)
+
+
+@app.get("/pages/{page_id}/export", response_class=PlainTextResponse)
+def export_page(page_id: RecordId, conn: Database) -> PlainTextResponse:
+    page = get_page(page_id, conn)
+    text = "\n\n".join(block.transcription for block in page.blocks)
+    return PlainTextResponse(text, headers={
+        "Content-Disposition": f'attachment; filename="newspaper-page-{page_id}.txt"',
+        "Cache-Control": "no-store",
+    })
 
 
 @app.get("/blocks/{block_id}")

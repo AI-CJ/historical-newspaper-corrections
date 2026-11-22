@@ -63,6 +63,15 @@ with sync_playwright() as pw:
     expect(history.locator("li")).to_have_count(2)
     expect(draft).to_have_value("Work in progress")
 
+    with first.expect_download() as download:
+        first.get_by_role("link", name="Download saved text").click()
+    file = download.value
+    assert file.suggested_filename == "newspaper-page-1.txt"
+    blocks = first.request.get("http://127.0.0.1:8053/pages/1").json()["blocks"]
+    expected = "\n\n".join(["The Evening Star.", *(b["original_text"] for b in blocks[1:])])
+    assert file.path().read_bytes() == expected.encode("utf-8")
+    expect(draft).to_have_value("Work in progress")
+
     draft.fill("The Evening Star.")
     first.get_by_label("Passage", exact=True).select_option(index=1)
     history.locator("summary").click()

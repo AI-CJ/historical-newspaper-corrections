@@ -90,6 +90,7 @@ function Workspace({page, catalog}: {page: Detail; catalog: Page[]}) {
   return <main>
     <div className="title"><p>Newspaper transcription desk</p><h1>{page.title}</h1>
       <span>{page.issue_date} · Page {page.page_number}</span>
+      <a href={`/pages/${page.id}/export`} download>Download saved text</a>
       {catalog.length > 1 && <label>Newspaper page <select disabled={busy} value={page.id}
         onChange={e => location.assign("?page=" + e.target.value)}>
         {catalog.map(p => <option key={p.id} value={p.id}>{p.title} · {p.issue_date} · Page {p.page_number}</option>)}

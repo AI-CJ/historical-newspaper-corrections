@@ -62,6 +62,30 @@ class ApiTests(DatabaseTestCase):
         self.assertEqual(self.client.get(f"/blocks/{blocks[1]['id']}").json(), blocks[1])
         self.assertEqual(self.client.get(f"/pages/{second['id']}").json()["blocks"], [])
 
+    def test_export_includes_saved_and_untouched_passages(self):
+        with self.connect() as conn:
+            seed_demo(conn)
+            conn.execute("UPDATE blocks SET position = 4 WHERE position = 1")
+        blocks = self.client.get("/pages/1").json()["blocks"]
+        text = "Evening édition\nSecond line"
+        response = self.client.post(f"/blocks/{blocks[1]['id']}/revisions",
+                                    json={"base_version": 0, "transcription": text})
+        self.assertEqual(response.status_code, 201)
+        export = self.client.get("/pages/1/export")
+        self.assertEqual(export.status_code, 200)
+        self.assertEqual(export.headers["content-type"], "text/plain; charset=utf-8")
+        self.assertEqual(export.headers["content-disposition"], 'attachment; filename="newspaper-page-1.txt"')
+        expected = "\n\n".join([blocks[0]["original_text"], text, blocks[2]["original_text"]])
+        self.assertEqual(export.content, expected.encode("utf-8"))
+
+    def test_export_empty_and_missing_page(self):
+        metadata = json.loads((DATA / "evening-star-1870-01-01.json").read_text())
+        with self.connect() as conn:
+            seed_page(conn, metadata, [])
+        response = self.client.get("/pages/1/export")
+        self.assertEqual((response.status_code, response.content), (200, b""))
+        self.assertEqual(self.client.get("/pages/2/export").status_code, 404)
+
     def test_revision_round_trip_and_history(self):
         with self.connect() as conn:
             seed_demo(conn)

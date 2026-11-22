@@ -46,6 +46,9 @@ Choose **Continue with my draft**, review the wording, and save when ready.
 Open **Revision history** beneath the editor to inspect each saved transcription
 and its timestamp, newest first. You can read earlier versions while editing a draft.
 
+Choose **Download saved text** to export the page's saved passages in reading
+order. Untouched passages keep their original OCR. Unsaved drafts stay in the editor.
+
 ## Read and correct pages over HTTP
 
 With the database migrated and seeded, keep `DATABASE_URL` set and run
@@ -54,6 +57,7 @@ With the database migrated and seeded, keep `DATABASE_URL` set and run
 
 - `GET /pages` lists pages with their scan and source links.
 - `GET /pages/{page_id}` returns one page with its OCR blocks in reading order.
+- `GET /pages/{page_id}/export` downloads UTF-8 plain text with a blank line between passages.
 - `GET /blocks/{block_id}` returns the original text and position of a single block.
 
 Use the numeric IDs returned by the API. A block's `source_id`, such as
